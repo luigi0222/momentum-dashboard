@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>Momentum Board</title>
+<style>
+:root {
+  --bg:      #08090a;
+  --bg1:     #0e1013;
+  --bg2:     #141720;
+  --border:  rgba(255,255,255,.07);
+  --text:    #e2e4e9;
+  --dim:     rgba(226,228,233,.45);
+  --dimmer:  rgba(226,228,233,.22);
+  --gold:    #d4a843;
+  --gold2:   #b8922d;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --blue:    #60a5fa;
+  --amber:   #f59e0b;
+  --r:       12px;
+  --font:    -apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden;}
+
+/* ── Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px;}
+
+/* ── Keyframes ───────────────────────────────────────── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+@keyframes pulse{0%,100%{opacity:.6;}50%{opacity:1;}}
+
+/* ── Header ──────────────────────────────────────────── */
+#hdr{
+  position:sticky;top:0;z-index:100;
+  background:rgba(8,9,10,.88);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:48px;
+}
+.logo{font-size:.88rem;font-weight:600;letter-spacing:.06em;
+  background:linear-gradient(135deg,var(--gold),#fff8e1);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.hdr-right{display:flex;align-items:center;gap:12px;}
+#upd-time{font-size:.68rem;color:var(--dimmer);letter-spacing:.05em;}
+#refresh-btn{
+  border:1px solid var(--border);border-radius:8px;
+  background:rgba(255,255,255,.04);
+  color:var(--dim);font-size:.7rem;padding:5px 10px;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+#refresh-btn:hover{background:rgba(255,255,255,.08);color:var(--text);}
+#refresh-btn.loading{animation:pulse 1s infinite;}
+
+/* ── Market Ticker Bar ───────────────────────────────── */
+#mkt-bar{
+  background:var(--bg1);
+  border-bottom:1px solid var(--border);
+  overflow-x:auto;white-space:nowrap;
+  padding:0 16px;height:44px;display:flex;align-items:center;gap:24px;
+  scrollbar-width:none;
+}
+#mkt-bar::-webkit-scrollbar{display:none;}
+.mkt-item{display:inline-flex;flex-direction:column;gap:1px;min-width:64px;}
+.mkt-label{font-size:.56rem;color:var(--dimmer);letter-spacing:.1em;text-transform:uppercase;}
+.mkt-val{font-size:.8rem;font-weight:500;letter-spacing:.03em;}
+.mkt-chg{font-size:.65rem;font-weight:500;}
+.up{color:var(--green);}
+.dn{color:var(--red);}
+.neu{color:var(--dim);}
+.fg-bar{
+  display:inline-block;width:28px;height:4px;border-radius:2px;
+  margin-top:2px;vertical-align:middle;
+}
+
+/* ── Tab Nav ─────────────────────────────────────────── */
+#tab-nav{
+  position:sticky;top:48px;z-index:90;
+  background:rgba(8,9,10,.88);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  display:flex;padding:0 8px;gap:2px;
+}
+.tab-btn{
+  padding:12px 14px;font-size:.78rem;font-weight:500;letter-spacing:.04em;
+  color:var(--dimmer);background:transparent;border:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;
+}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+.tab-btn:hover:not(.active){color:var(--dim);}
+
+/* ── Tab Content ─────────────────────────────────────── */
+.tab{display:none;padding:16px;animation:fadeIn .3s ease;}
+.tab.active{display:block;}
+
+/* ── Section Title ───────────────────────────────────── */
+.sec-title{
+  font-size:.65rem;letter-spacing:.18em;color:var(--dimmer);
+  text-transform:uppercase;margin-bottom:12px;
+}
+
+/* ── Alert Strip ─────────────────────────────────────── */
+#alert-strip{margin-bottom:16px;}
+.alert-card{
+  border-radius:var(--r);padding:12px 14px;margin-bottom:8px;
+  border:1px solid;animation:fadeIn .4s ease;
+}
+.alert-card.momentum{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.2);}
+.alert-card.dip      {background:rgba(239,68,68,.06); border-color:rgba(239,68,68,.2);}
+.alert-card.early    {background:rgba(212,168,67,.06);border-color:rgba(212,168,67,.2);}
+.alert-card.position {background:rgba(96,165,250,.06);border-color:rgba(96,165,250,.2);}
+.alert-title{font-size:.84rem;font-weight:600;margin-bottom:4px;}
+.alert-details{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.alert-tag{
+  font-size:.65rem;padding:2px 8px;border-radius:100px;
+  background:rgba(255,255,255,.06);color:var(--dim);
+}
+.portfolio-badge{
+  font-size:.6rem;padding:2px 7px;border-radius:100px;margin-left:6px;
+  background:rgba(212,168,67,.15);color:var(--gold);vertical-align:middle;
+}
+
+/* ── Sector Grid ─────────────────────────────────────── */
+#sector-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+@media(min-width:640px){#sector-grid{grid-template-columns:repeat(3,1fr);}}
+
+.sector-card{
+  background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px;cursor:pointer;transition:all .2s;
+}
+.sector-card:hover{background:var(--bg2);border-color:rgba(255,255,255,.12);}
+.sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sc-icon-name{display:flex;align-items:center;gap:7px;}
+.sc-icon{font-size:1.05rem;}
+.sc-name{font-size:.78rem;font-weight:500;letter-spacing:.02em;}
+.sc-score-num{font-size:1.1rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.sc-bar-track{height:3px;background:rgba(255,255,255,.07);border-radius:2px;margin-bottom:8px;}
+.sc-bar-fill{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.sc-bottom{display:flex;justify-content:space-between;align-items:center;}
+.sc-label{
+  font-size:.63rem;font-weight:500;padding:2px 8px;border-radius:100px;
+}
+.label-strong{background:rgba(34,197,94,.15);color:var(--green);}
+.label-mild  {background:rgba(132,204,22,.15);color:#84cc16;}
+.label-neutral{background:rgba(226,228,233,.08);color:var(--dim);}
+.label-weak  {background:rgba(239,68,68,.1);color:var(--red);}
+.sc-ret{font-size:.7rem;font-variant-numeric:tabular-nums;}
+
+/* ── Sector Detail List ──────────────────────────────── */
+.sector-row{
+  background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;margin-bottom:8px;
+}
+.sr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.sr-left{display:flex;align-items:center;gap:8px;}
+.sr-score-box{
+  min-width:44px;height:44px;border-radius:10px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  border:1px solid rgba(255,255,255,.07);
+}
+.sr-score-n{font-size:1.1rem;font-weight:700;}
+.sr-score-l{font-size:.55rem;color:var(--dim);}
+.sr-name-area{display:flex;flex-direction:column;gap:3px;}
+.sr-icon-name{display:flex;align-items:center;gap:6px;}
+.sr-name{font-size:.88rem;font-weight:500;}
+.sr-etf{font-size:.65rem;color:var(--dimmer);}
+.sr-bar-track{height:3px;background:rgba(255,255,255,.07);border-radius:2px;margin-bottom:10px;}
+.sr-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+.sr-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.sr-metric{background:rgba(255,255,255,.03);border-radius:8px;padding:8px;text-align:center;}
+.sr-metric-label{font-size:.55rem;color:var(--dimmer);margin-bottom:3px;letter-spacing:.06em;}
+.sr-metric-val{font-size:.8rem;font-weight:600;font-variant-numeric:tabular-nums;}
+
+/* ── Portfolio Summary ───────────────────────────────── */
+#pf-summary{
+  background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px;margin-bottom:14px;
+}
+.pf-total-val{font-size:1.7rem;font-weight:700;letter-spacing:-.02em;margin-bottom:4px;}
+.pf-pnl-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.pf-pnl-main{font-size:.9rem;font-weight:600;}
+.pf-meta{font-size:.7rem;color:var(--dim);margin-top:6px;}
+.pf-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:2px;
+  background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);
+  padding:12px 14px;margin-bottom:6px;
+}
+.pf-row-left{min-width:0;}
+.pf-row-right{text-align:right;display:flex;flex-direction:column;gap:2px;align-items:flex-end;}
+.pf-name{font-size:.84rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pf-sub{font-size:.66rem;color:var(--dim);margin-top:2px;}
+.pf-sector-tag{
+  display:inline-block;font-size:.58rem;padding:1px 6px;border-radius:4px;
+  background:rgba(255,255,255,.05);color:var(--dimmer);margin-right:4px;
+}
+.pf-curr-val{font-size:.9rem;font-weight:600;font-variant-numeric:tabular-nums;}
+.pf-pnl{font-size:.72rem;font-weight:500;font-variant-numeric:tabular-nums;}
+.pf-jpy{font-size:.66rem;color:var(--dim);}
+
+/* ── Skeleton ────────────────────────────────────────── */
+.skel{
+  background:linear-gradient(90deg,var(--bg1) 25%,var(--bg2) 50%,var(--bg1) 75%);
+  background-size:400% 100%;animation:shimmer 1.5s infinite;
+  border-radius:6px;
+}
+
+/* ── Loading overlay ─────────────────────────────────── */
+#loading{
+  position:fixed;inset:0;background:rgba(8,9,10,.85);backdrop-filter:blur(6px);
+  z-index:200;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;transition:opacity .4s;
+}
+#loading.hide{opacity:0;pointer-events:none;}
+.spin{
+  width:32px;height:32px;border:2px solid rgba(255,255,255,.1);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.load-txt{font-size:.75rem;color:var(--dim);letter-spacing:.1em;}
+
+/* ── No alerts ───────────────────────────────────────── */
+.no-alert{
+  text-align:center;padding:32px 16px;color:var(--dimmer);font-size:.8rem;
+  border:1px dashed var(--border);border-radius:var(--r);
+}
+
+/* ── Divider ─────────────────────────────────────────── */
+.divider{height:1px;background:var(--border);margin:16px 0;}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spin"></div>
+  <p class="load-txt">市場データを取得中...</p>
+</div>
+
+<!-- Header -->
+<header id="hdr">
+  <span class="logo">▲ Momentum Board</span>
+  <div class="hdr-right">
+    <span id="upd-time">--:--</span>
+    <button id="refresh-btn" onclick="loadData(true)">↻ 更新</button>
+  </div>
+</header>
+
+<!-- Market Ticker Bar -->
+<div id="mkt-bar">
+  <div class="mkt-item" id="m-vix">
+    <span class="mkt-label">VIX</span>
+    <span class="mkt-val">--</span>
+    <span class="mkt-chg neu">--</span>
+  </div>
+  <div class="mkt-item" id="m-sp500">
+    <span class="mkt-label">S&P500</span>
+    <span class="mkt-val">--</span>
+    <span class="mkt-chg neu">--</span>
+  </div>
+  <div class="mkt-item" id="m-nasdaq">
+    <span class="mkt-label">NASDAQ</span>
+    <span class="mkt-val">--</span>
+    <span class="mkt-chg neu">--</span>
+  </div>
+  <div class="mkt-item" id="m-sox">
+    <span class="mkt-label">SOX</span>
+    <span class="mkt-val">--</span>
+    <span class="mkt-chg neu">--</span>
+  </div>
+  <div class="mkt-item" id="m-usdjpy">
+    <span class="mkt-label">USD/JPY</span>
+    <span class="mkt-val">--</span>
+    <span class="mkt-chg neu">--</span>
+  </div>
+  <div class="mkt-item" id="m-us10y">
+    <span class="mkt-label">米10年</span>
+    <span class="mkt-val">--</span>
+    <span class="mkt-chg neu">--</span>
+  </div>
+  <div class="mkt-item" id="m-fg">
+    <span class="mkt-label">恐怖/貪欲</span>
+    <span class="mkt-val" id="fg-val">--</span>
+    <div class="fg-bar" id="fg-bar" style="background:#555;"></div>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<nav id="tab-nav">
+  <button class="tab-btn active" data-tab="dashboard"  onclick="switchTab('dashboard')">ダッシュボード</button>
+  <button class="tab-btn"        data-tab="sectors"    onclick="switchTab('sectors')">セクター</button>
+  <button class="tab-btn"        data-tab="portfolio"  onclick="switchTab('portfolio')">ポートフォリオ</button>
+  <button class="tab-btn"        data-tab="alerts"     onclick="switchTab('alerts')">アラート <span id="alert-badge" style="display:none;background:var(--red);color:#fff;font-size:.55rem;padding:1px 5px;border-radius:8px;margin-left:4px;">0</span></button>
+</nav>
+
+<!-- ═══ DASHBOARD ════════════════════════════════════════ -->
+<div class="tab active" id="tab-dashboard">
+  <div id="alert-strip"></div>
+  <p class="sec-title">セクター モメンタム</p>
+  <div id="sector-grid"></div>
+</div>
+
+<!-- ═══ SECTORS ══════════════════════════════════════════ -->
+<div class="tab" id="tab-sectors">
+  <p class="sec-title">全セクター 詳細スコア</p>
+  <div id="sector-list"></div>
+</div>
+
+<!-- ═══ PORTFOLIO ════════════════════════════════════════ -->
+<div class="tab" id="tab-portfolio">
+  <div id="pf-summary">
+    <p class="sec-title">保有資産</p>
+    <div class="pf-total-val" id="pf-total">¥--</div>
+    <div class="pf-pnl-row">
+      <span class="pf-pnl-main" id="pf-pnl-main">--</span>
+      <span class="pf-pnl-main neu" id="pf-pnl-pct">--</span>
+    </div>
+    <p class="pf-meta" id="pf-meta">--</p>
+  </div>
+  <div id="holdings-list"></div>
+</div>
+
+<!-- ═══ ALERTS ═══════════════════════════════════════════ -->
+<div class="tab" id="tab-alerts">
+  <div id="alerts-full"></div>
+</div>
+
+<script>
+// ── 状態管理 ──────────────────────────────────────────────────────
+let cache = null;
+
+// ── データ取得 ────────────────────────────────────────────────────
+async function loadData(force = false) {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('loading');
+  btn.textContent = '取得中...';
+  showLoading(true);
+
+  try {
+    const r = await fetch('/api/all' + (force ? '?_=' + Date.now() : ''));
+    cache = await r.json();
+    renderAll(cache);
+    document.getElementById('upd-time').textContent = cache.updated_at || new Date().toLocaleTimeString('ja-JP');
+  } catch(e) {
+    console.error(e);
+  } finally {
+    btn.classList.remove('loading');
+    btn.textContent = '↻ 更新';
+    showLoading(false);
+  }
+}
+
+function showLoading(v) {
+  const el = document.getElementById('loading');
+  if(v) el.classList.remove('hide');
+  else  setTimeout(() => el.classList.add('hide'), 200);
+}
+
+// ── 全レンダリング ─────────────────────────────────────────────────
+function renderAll(data) {
+  renderMarket(data.market);
+  renderSectorGrid(data.sectors);
+  renderSectorList(data.sectors);
+  renderPortfolio(data.portfolio);
+  renderAlerts(data.alerts || []);
+}
+
+// ── 市場バー ──────────────────────────────────────────────────────
+function renderMarket(m) {
+  const map = {
+    VIX:    'm-vix',    SP500: 'm-sp500',
+    NASDAQ: 'm-nasdaq', SOX:   'm-sox',
+    USDJPY: 'm-usdjpy', US10Y: 'm-us10y',
+  };
+  for(const [k, id] of Object.entries(map)) {
+    const d  = m[k];
+    const el = document.getElementById(id);
+    if(!el || !d) continue;
+    const val = d.value !== null ? d.value.toLocaleString('en-US', {maximumFractionDigits:2}) : '--';
+    const chg = d.change_pct;
+    const up  = chg > 0;
+    const bad = k === 'VIX';  // VIXは上昇が悪い
+    let cls = 'neu';
+    if(chg !== 0 && chg !== null) cls = (up !== bad) ? 'up' : 'dn';
+    el.children[1].textContent = val;
+    el.children[2].textContent = chg !== null ? `${chg > 0 ? '+' : ''}${chg.toFixed(2)}%` : '--';
+    el.children[2].className   = 'mkt-chg ' + cls;
+  }
+
+  const fg = m.FEAR_GREED;
+  if(fg && fg.value !== null) {
+    document.getElementById('fg-val').textContent = `${fg.value} ${fg.text || ''}`;
+    const pct = fg.value;
+    const col = pct < 25 ? '#ef4444' : pct < 45 ? '#f97316' : pct < 55 ? '#eab308' : pct < 75 ? '#84cc16' : '#22c55e';
+    document.getElementById('fg-bar').style.background = col;
+    document.getElementById('fg-bar').style.width = (pct * 0.36) + 'px';
+  }
+}
+
+// ── スコア → カラー ────────────────────────────────────────────────
+function scoreColor(s) {
+  if(s >= 80) return '#22c55e';
+  if(s >= 65) return '#84cc16';
+  if(s >= 50) return '#eab308';
+  if(s >= 35) return '#f97316';
+  return '#ef4444';
+}
+function labelClass(l) {
+  if(l === '強い')     return 'label-strong';
+  if(l === 'やや強い') return 'label-mild';
+  if(l === '中立')     return 'label-neutral';
+  return 'label-weak';
+}
+function retCls(v) { return v > 0 ? 'up' : v < 0 ? 'dn' : 'neu'; }
+function fmtPct(v) { return `${v > 0 ? '+' : ''}${v.toFixed(2)}%`; }
+function fmtJpy(v) { return '¥' + Math.round(v).toLocaleString(); }
+
+// ── ダッシュボード: セクターグリッド ───────────────────────────────
+function renderSectorGrid(sectors) {
+  // アラート上部表示（スコア80以上の最大2件）
+  const strip = document.getElementById('alert-strip');
+  strip.innerHTML = '';
+  const top = sectors.filter(s => s.score >= 80 || s.score <= 30).slice(0, 3);
+  if(top.length) {
+    top.forEach(s => {
+      const isHigh = s.score >= 80;
+      const a = document.createElement('div');
+      a.className = `alert-card ${isHigh ? 'momentum' : 'dip'}`;
+      a.innerHTML = `<div class="alert-title">${isHigh ? '🚀' : '📉'} ${s.icon} ${s.name} &nbsp;<span style="font-size:.8rem;font-variant-numeric:tabular-nums;color:${scoreColor(s.score)};">${s.score}pt</span></div>
+        <div class="alert-details">
+          <span class="alert-tag">本日 ${fmtPct(s.day_return)}</span>
+          <span class="alert-tag">5日 ${fmtPct(s.return_5d)}</span>
+          <span class="alert-tag">RSI ${s.rsi}</span>
+        </div>`;
+      strip.appendChild(a);
+    });
+  }
+
+  const grid = document.getElementById('sector-grid');
+  grid.innerHTML = '';
+  sectors.forEach(s => {
+    const col = scoreColor(s.score);
+    const card = document.createElement('div');
+    card.className = 'sector-card';
+    card.onclick = () => { switchTab('sectors'); };
+    card.innerHTML = `
+      <div class="sc-top">
+        <div class="sc-icon-name">
+          <span class="sc-icon">${s.icon}</span>
+          <span class="sc-name">${s.name}</span>
+        </div>
+        <span class="sc-score-num" style="color:${col}">${s.score}</span>
+      </div>
+      <div class="sc-bar-track">
+        <div class="sc-bar-fill" style="width:${s.score}%;background:${col}"></div>
+      </div>
+      <div class="sc-bottom">
+        <span class="sc-label ${labelClass(s.label)}">${s.label}</span>
+        <span class="sc-ret ${retCls(s.day_return)}">${fmtPct(s.day_return)}</span>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+// ── セクター詳細リスト ────────────────────────────────────────────
+function renderSectorList(sectors) {
+  const list = document.getElementById('sector-list');
+  list.innerHTML = '';
+  sectors.forEach(s => {
+    const col = scoreColor(s.score);
+    const row = document.createElement('div');
+    row.className = 'sector-row';
+    row.innerHTML = `
+      <div class="sr-top">
+        <div class="sr-left">
+          <div class="sr-score-box" style="border-color:${col}22;">
+            <span class="sr-score-n" style="color:${col}">${s.score}</span>
+            <span class="sr-score-l">${s.label}</span>
+          </div>
+          <div class="sr-name-area">
+            <div class="sr-icon-name">
+              <span style="font-size:1.1rem">${s.icon}</span>
+              <span class="sr-name">${s.name}</span>
+            </div>
+            <span class="sr-etf">ETF: ${s.etf}</span>
+          </div>
+        </div>
+      </div>
+      <div class="sr-bar-track">
+        <div class="sr-bar-fill" style="width:${s.score}%;background:${col}"></div>
+      </div>
+      <div class="sr-metrics">
+        <div class="sr-metric">
+          <div class="sr-metric-label">本日</div>
+          <div class="sr-metric-val ${retCls(s.day_return)}">${fmtPct(s.day_return)}</div>
+        </div>
+        <div class="sr-metric">
+          <div class="sr-metric-label">5日</div>
+          <div class="sr-metric-val ${retCls(s.return_5d)}">${fmtPct(s.return_5d)}</div>
+        </div>
+        <div class="sr-metric">
+          <div class="sr-metric-label">RSI</div>
+          <div class="sr-metric-val" style="color:${s.rsi>70?'#ef4444':s.rsi<30?'#22c55e':'var(--text)'}">${s.rsi}</div>
+        </div>
+        <div class="sr-metric">
+          <div class="sr-metric-label">出来高比</div>
+          <div class="sr-metric-val ${s.vol_ratio>=1.3?'up':'neu'}">${s.vol_ratio.toFixed(1)}x</div>
+        </div>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+// ── ポートフォリオ ────────────────────────────────────────────────
+function renderPortfolio(pf) {
+  const totEl  = document.getElementById('pf-total');
+  const pnlEl  = document.getElementById('pf-pnl-main');
+  const pctEl  = document.getElementById('pf-pnl-pct');
+  const metaEl = document.getElementById('pf-meta');
+
+  totEl.textContent  = fmtJpy(pf.total_current_jpy);
+  const isPnlPos     = pf.total_pnl_jpy >= 0;
+  pnlEl.textContent  = (isPnlPos ? '+' : '') + fmtJpy(pf.total_pnl_jpy);
+  pnlEl.className    = `pf-pnl-main ${isPnlPos ? 'up' : 'dn'}`;
+  pctEl.textContent  = `(${pf.total_pnl_pct > 0 ? '+' : ''}${pf.total_pnl_pct.toFixed(2)}%)`;
+  pctEl.className    = `pf-pnl-main ${isPnlPos ? 'up' : 'dn'}`;
+  metaEl.textContent = `USD/JPY ${pf.usdjpy} ｜ 本日損益 ${pf.total_day_pnl_jpy >= 0 ? '+' : ''}${fmtJpy(pf.total_day_pnl_jpy)}`;
+
+  const list = document.getElementById('holdings-list');
+  list.innerHTML = '';
+  pf.holdings.forEach(h => {
+    const pos   = h.pnl_pct >= 0;
+    const curr  = h.currency === 'USD'
+      ? `$${h.current_price.toLocaleString('en-US', {minimumFractionDigits:2})} (${fmtJpy(h.current_jpy)})`
+      : `¥${h.current_price.toLocaleString()}`;
+    const row = document.createElement('div');
+    row.className = 'pf-row';
+    row.innerHTML = `
+      <div class="pf-row-left">
+        <div class="pf-name">${h.name} <span style="font-size:.7rem;color:var(--dimmer)">${h.symbol}</span></div>
+        <div class="pf-sub">
+          <span class="pf-sector-tag">${h.sector}</span>
+          ${h.qty}株 ｜ 取得 ${h.currency === 'USD' ? '$' : '¥'}${h.avg_cost.toLocaleString()}
+        </div>
+      </div>
+      <div class="pf-row-right">
+        <div class="pf-curr-val">${curr}</div>
+        <div class="pf-pnl ${pos ? 'up' : 'dn'}">${pos ? '+' : ''}${h.pnl_pct.toFixed(2)}%</div>
+        <div class="pf-jpy ${pos ? 'up' : 'dn'}">${pos ? '+' : ''}${fmtJpy(h.pnl_jpy)}</div>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+// ── アラート ──────────────────────────────────────────────────────
+function renderAlerts(alerts) {
+  // バッジ
+  const badge = document.getElementById('alert-badge');
+  if(alerts.length > 0) {
+    badge.style.display = 'inline';
+    badge.textContent   = alerts.length;
+  } else {
+    badge.style.display = 'none';
+  }
+
+  const fullEl = document.getElementById('alerts-full');
+  fullEl.innerHTML = '';
+
+  if(alerts.length === 0) {
+    fullEl.innerHTML = '<div class="no-alert">現在アラートはありません</div>';
+    return;
+  }
+
+  alerts.forEach(a => {
+    const el = document.createElement('div');
+    el.className = `alert-card ${a.type}`;
+    el.innerHTML = `
+      <div class="alert-title">
+        ${a.title}
+        ${a.portfolio_related ? '<span class="portfolio-badge">保有中</span>' : ''}
+        ${a.score !== null ? `<span style="font-size:.75rem;color:${scoreColor(a.score)};margin-left:6px;">${a.score}pt</span>` : ''}
+      </div>
+      <div class="alert-details">
+        ${a.details.map(d => `<span class="alert-tag">${d}</span>`).join('')}
+      </div>`;
+    fullEl.appendChild(el);
+  });
+}
+
+// ── タブ切替 ──────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── 起動 ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadData();
+  setInterval(() => loadData(), 5 * 60 * 1000);  // 5分ごとに自動更新
+});
+</script>
+</body>
+</html>
