@@ -4,7 +4,7 @@ Flask + Flask-Caching（5分キャッシュ）
 """
 import os
 from datetime import datetime
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, send_file
 from flask_caching import Cache
 from dotenv import load_dotenv
 
@@ -25,10 +25,7 @@ cache = Cache(app, config={
 
 @app.route("/")
 def index():
-    try:
-        return render_template("index.html")
-    except Exception as e:
-        return f"<pre>ERROR: {e}\nBASE_DIR: {BASE_DIR}\nFiles: {os.listdir(BASE_DIR)}</pre>", 500
+    return send_file(os.path.join(BASE_DIR, "templates", "index.html"))
 
 # ─── API ──────────────────────────────────────────────────────────
 
