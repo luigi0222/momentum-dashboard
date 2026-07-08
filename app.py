@@ -25,7 +25,10 @@ cache = Cache(app, config={
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    try:
+        return render_template("index.html")
+    except Exception as e:
+        return f"<pre>ERROR: {e}\nBASE_DIR: {BASE_DIR}\nFiles: {os.listdir(BASE_DIR)}</pre>", 500
 
 # ─── API ──────────────────────────────────────────────────────────
 
