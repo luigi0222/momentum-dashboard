@@ -62,7 +62,7 @@ def api_portfolio():
 
 @app.route("/health")
 def health():
-    return jsonify({"ok": True, "time": datetime.now().isoformat()})
+    return jsonify({"ok": True, "time": datetime.now().isoformat(), "version": "v3"})
 
 # ─── アラート生成 ─────────────────────────────────────────────────
 
