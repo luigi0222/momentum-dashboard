@@ -14,7 +14,8 @@ from modules.portfolio import get_portfolio
 
 load_dotenv()
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(__name__, template_folder=os.path.join(BASE_DIR, "templates"))
 cache = Cache(app, config={
     "CACHE_TYPE":            "SimpleCache",
     "CACHE_DEFAULT_TIMEOUT": 300,   # 5分
